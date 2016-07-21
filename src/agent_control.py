@@ -5,27 +5,31 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-from sphero_swarm_node.msg import SpheroTwist
+#from sphero_swarm_node.msg import SpheroTwist
 from mm_apriltags_tracker.msg import april_tag_pos
 from geometry_msgs.msg import Pose2D
 
 
-APRILTAG = 6
+APRILTAG = 50
 TBOT = 32
 
 class AgentControl(QtGui.QWidget):
     def __init__(self):
         super(QtGui.QWidget, self).__init__()
-        width = 500 #TODO change to query param
-        height = 500 #TODO change to query param
+
+        self.width = 300 #TODO change to query param
+        self.height = 300 #TODO change to query param
         self.saveNum = 0
-        self.resize(width, height)
+        self.resize(self.width, self.height)
         self.initUI()
         self.leader = -1
+
         rospy.init_node("world_view", anonymous = True)
+
         self.tagLocSub = rospy.Subscriber('/april_tag_pos', april_tag_pos, self.tagPosCallback)
+        self.robotLocSub = rospy.Subscriber('/robot_pos', Pose2D, self.robotPosCallback)
         self.blackPen = QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine)
-        self.bluePen = QtGui.QPen(QtCore.Qt.blue, 2, QtCore.Qt.SolidLine)
+        self.bluePen = QtGui.QPen(QtCore.Qt.blue, 5, QtCore.Qt.SolidLine)
         self.agentMap = {}
 
 
@@ -44,7 +48,7 @@ class AgentControl(QtGui.QWidget):
 
     def createPNG(self):
         self.update()
-        p = QPixmap.grabWindow(self.winId())
+        p = QPixmap.grabWidget(self, 0, 0, self.width, self.height)
         p.save("save%d.png" % self.saveNum, "png")
         self.saveNum += 1
 
@@ -54,16 +58,23 @@ class AgentControl(QtGui.QWidget):
             self.agentMap[msg.id[i]] = msg.pose[i]
         self.update()
 
+    def robotPosCallback(self, msg):
+        self.agentMap[97] = msg
+        self.update
+
     def paintEvent(self, event):
         painter = QtGui.QPainter();
         painter.begin(self)
         for key, value in self.agentMap.iteritems():
 
             rect = QRect(value.x - APRILTAG/2, value.y - APRILTAG/2, APRILTAG, APRILTAG)
-            painter.setBrush(Qt.black)
-            if(key == 0):
-                painter.setBrush(Qt.blue)
-            painter.drawRect(rect)
+            if(key == 97):
+                painter.setPen(self.bluePen)
+                painter.drawPoint(value.x, value.y)
+            else:
+                painter.setPen(self.blackPen)
+                painter.setBrush(Qt.black)
+                painter.drawRect(rect)
         painter.end()
 
 
